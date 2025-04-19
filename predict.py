@@ -125,7 +125,7 @@ class Predict:
         norm = mcolors.Normalize(**self.vlim)
         cmap = [self.cmap(norm(v)) for v in values]
 
-        plt.figure(figsize=(16.5, 5))
+        plt.figure(figsize=(15, 5))
         plt.grid(True, color=self.border, linestyle="--")
         plt.bar(countries, values, color=cmap, zorder=4)
         ax = plt.gca()
@@ -147,7 +147,7 @@ class Predict:
 
     def line(self, image, ctrl={}):
         ax, axes = max([i["ax"] for i in image]), []
-        fig = [(20, 5), (20, 11), (20, 17)][ax // 2]
+        fig = [(15, 5), (15, 11), (15, 17)][ax // 2]
         fig = plt.figure(figsize=fig)
         for i in range(ax + 1):
             i = int(f"{[11,12,22,22,32,32][ax]}{i+1}")

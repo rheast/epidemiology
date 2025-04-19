@@ -96,6 +96,8 @@ class UNAIDS:
     def num_lim(self, value, stp=""):
         if value == 0:
             return 0
+        elif value == 1:
+            return "100%"
         units = [(1e6, "m"), (1e3, "k"), (1, ""), (0.01, "%")]
         num, unit = next((n, u) for n, u in units if value >= n or u == "%")
         stp = str(stp) if type(stp) == type(1) else ""

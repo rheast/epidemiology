@@ -45,7 +45,7 @@ class Forest:
     def forest(self, matrix):
         data, robot, color = [], [], self.color
         info = {i: None for i in self.info}
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 4))
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12.5, 4.5))
 
         for i in matrix:
             arr = {**info, **matrix[i]}
@@ -83,7 +83,8 @@ class Forest:
         colors = [color[4] if i == "+" else color[0] for i in sets["Correlation"]]
         ax2.bar(sets["Clue"], sets["Importance"], color=colors, width=0.5, zorder=5)
         ax2.set_ylim(0, 25), ax2.set_ylabel("Importance")
-        ax2.set_yticks(ax2.get_yticks()), [f"{i}%" for i in ax2.get_yticks()]
+        ax2.set_yticks(ax2.get_yticks())
+        ax2.set_yticklabels([f"{i:.0f}%" for i in ax2.get_yticks()])
         ax2.tick_params(axis="x", rotation=0)
         ax2.grid(True, color=self.border, linestyle="--")
         for e in ["top", "right"]:
@@ -94,6 +95,7 @@ class Forest:
         mark = [{"marker": "o", "color": "w", "markersize": 7.5, **i} for i in mark]
         mark = [mlines.Line2D([], [], **i) for i in mark]
         ax2.legend(handles=mark, loc="upper right")
+        plt.xticks(rotation=20, ha="right")
 
         fig.tight_layout()
         path = os.path.join(self.image, "output.svg")
