@@ -60,7 +60,7 @@ class Predict:
         ctrl = {"path": "_global", "y0": (15e6, 50e6), "y3": (1e5, 5e5)}
         matrix = [0, 1, 3, 0, 2, 2, 3, 1, 2]
         matrix = [[self.world[i], e] for i, e in enumerate(matrix)]
-        matrix = [[*i, {"rule": "sum", "txt": "Sum result (Global)"}] for i in matrix]
+        matrix = [[*i, {"rule": "sum", "txt": "Global (Sum result)"}] for i in matrix]
         return matrix, ctrl
 
     def run_target(self):
@@ -237,7 +237,7 @@ class Predict:
             data = unaids.sheet_div(*unaids.sheet_com(data, matrix[i - 1]))
             sets = {**sets, "ax": 1, "range": 0.01, "name": info["text"][1]}
         if rule == "sum" and i == 0:
-            sets = {**sets, "alpha": 0.25, "range": 0.015, "name": ""}
+            sets = {**sets, "color": self.color[0], "name": "Global (Fit result)"}
             line = list(unaids.sheet_zip(data, lambda x: x % 5 == 0))
             image += unaids.sheet_img(line, (), {**sets, "alpha": 1})
         return sets, data, image
@@ -248,7 +248,7 @@ class Predict:
         model = rheast.fit_all(data)
         image += unaids.sheet_img(data, model, sets)
         if rule == "sum" and i > 0:
-            sets = {"ax": 0, "color": self.color[0]}
+            sets = {"ax": 0, "color": "#4f5eff"}
             robot.append(unaids.sheet_num(model, space=0.25, **sets))
         if rule == "sum" and i == len(matrix) - 1:
             sets = {**sets, "name": info["txt"]}
