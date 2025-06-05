@@ -1,12 +1,15 @@
-import atexit, datetime, os, shutil
+import atexit, os, shutil
 import numpy as np
 
 
 class RHEast:
     def __init__(self) -> None:
         self.font = "Times New Roman"
-        self.year = 2025  # int(datetime.datetime.now().year)
+        self.year = 2025
         self.path = os.path.dirname(os.path.abspath(__file__))
+        self.file = os.path.join(self.path, "file")
+        self.image = os.path.join(self.path, "image")
+        os.makedirs(self.image, exist_ok=True)
         pycache = os.path.join(self.path, "__pycache__")
         atexit.register(lambda: shutil.rmtree(pycache, ignore_errors=True))
         return

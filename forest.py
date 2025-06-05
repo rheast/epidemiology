@@ -1,33 +1,27 @@
-import json, os, re
+import json, os
 import numpy as np
 import pandas as pd  # pip install pandas openpyxl xlrd
 import matplotlib.pyplot as plt  # pip install matplotlib
 import matplotlib.lines as mlines
 from sklearn.ensemble import RandomForestRegressor  # pip install scikit-learn
+from rheast import rheast
+from unaids import unaids
 
 
 class Forest:
     def __init__(self) -> None:
-        self.path = os.path.dirname(os.path.abspath(__file__))
-        self.file = os.path.join(self.path, "file")
-        self.image = os.path.join(self.path, "image")
         self.border = "#e7f1ff"
         self.color = [
             *["#1677ff", "#00bfd0", "#00b578", "#ff8f1f"],
             *["#f93a4a", "#ff36c4", "#b136ff", "#7c868d", "#996b59"],
         ]
-        self.world = [
-            *["Global", "Asia and the Pacific"],
-            *["Caribbean", "Eastern and southern Africa"],
-            *["Eastern Europe and central Asia", "Latin America"],
-            *["Middle East and North Africa", "Western and central Africa"],
-            *["Western and central Europe and North America"],
-        ]
-        self.info = [
-            *["Country", "Growth rate", "LGBT score"],
-            *["Sex education", "Urban population", "Funding"],
-            *["First 95 target", "Second 95 target", "Third 95 target"],
-            *["New infection"],
+        self.download = [
+            "http://www.unaids.org/sites/default/files/media_asset/HIV_estimates_from_1990-to-present.xlsx",
+            "https://www.equaldex.com/api/mapdata.php?info_id=999",
+            "https://cdn.amcharts.com/lib/5/geodata/data/countries2.js",
+            "https://cdn.who.int/media/docs/default-source/hrp/379607.pdf",
+            "https://api.worldbank.org/v2/en/indicator/SP.URB.TOTL.IN.ZS?downloadformat=excel",
+            "https://hivfinancial.unaids.org/GARPR16-GAM2024ProgrammeExpenditures.xlsx",
         ]
         plt.rcParams["font.sans-serif"] = "Times New Roman"
         self.run()
@@ -37,43 +31,44 @@ class Forest:
         run = [self.val, self.lgb, self.sex, self.urb, self.fun, self.tar]
         for i in run:
             matrix = i(matrix)
-        path = os.path.join(self.image, "output.txt")
+        path = os.path.join(rheast.image, "output.txt")
         with open(path, "w", encoding="utf-8") as f:
             f.write(str(matrix))
-        self.forest(matrix)
-        self.info.remove("New infection")
-        self.forest(matrix)
+        for i in ["", "New infection"]:
+            if i in unaids.info:
+                unaids.info.remove(i)
+            self.forest(matrix)
         return
 
     def forest(self, matrix):
         data, robot, color = [], [], self.color
-        info = {i: None for i in self.info}
+        info = {i: None for i in unaids.info}
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12.5, 4))
-        # print({i: sum(i in matrix[e] for e in matrix) for i in self.info})
+        # print({i: sum(i in matrix[e] for e in matrix) for i in unaids.info})
 
         for i in matrix:
             arr = {**info, **matrix[i]}
             if len(str(arr).split("None")) == 1:
                 data.append(arr)
 
-        x = [[d[i] for i in self.info[2:]] for d in data]
+        x = [[d[i] for i in unaids.info[2:]] for d in data]
         y = [d["Growth rate"] for d in data]
         z = [d["Country"] for d in data]
         model = {"n_estimators": 1000, "random_state": 0}
-        if "New infection" in self.info:
-            model["max_features"] = int(np.sqrt(len(self.info) - 1))
+        if "New infection" in unaids.info:
+            model["max_features"] = int(np.sqrt(len(unaids.info)))
         rf_model = RandomForestRegressor(**model)
         rf_model.fit(x, y)
 
-        for i, e in enumerate(self.info[2:]):
+        for i, e in enumerate(unaids.info[2:]):
             a = np.corrcoef([d[e] for d in data], y)[0, 1]
             robot.append("+" if a > 0 else "-")
 
         imp = [round(i * 100, 2) for i in rf_model.feature_importances_]
-        sets = {"Clue": self.info[2:], "Importance": imp, "Correlation": robot}
+        sets = {"Clue": unaids.info[2:], "Importance": imp, "Correlation": robot}
         sets = pd.DataFrame(sets)
         sets = sets.sort_values(by="Importance", ascending=False)
-        path = os.path.join(self.image, "output.xlsx")
+        path = os.path.join(rheast.image, "output.xlsx")
         sets.to_excel(path, index=False)
 
         mark = {"labels": sets["Clue"], "colors": color[: len(sets)]}
@@ -105,12 +100,12 @@ class Forest:
         plt.xticks(rotation=20, ha="right")
 
         fig.tight_layout()
-        path = os.path.join(self.image, f"output.{len(self.info)}.svg")
+        path = os.path.join(rheast.image, f"output.{len(unaids.info)}.svg")
         fig.savefig(path, bbox_inches="tight", format="svg")
         return
 
     def val(self, matrix):
-        path = os.path.join(self.image, "fig__bar.txt")
+        path = os.path.join(rheast.image, "fig__bar.txt")
         with open(path, "r", encoding="utf-8") as f:
             data = json.loads(f.read().replace("'", '"'))
             for a, b in data:
@@ -120,10 +115,10 @@ class Forest:
 
     def lgb(self, matrix):
         data, trans = {}, {}
-        path = os.path.join(self.file, "LGBT score.json.txt")
+        path = os.path.join(rheast.file, "LGBT score.json.txt")
         with open(path, "r", encoding="utf-8") as f:
             data = json.loads(f.read())["regions"]
-        path = os.path.join(self.file, "LGBT score.js.txt")
+        path = os.path.join(rheast.file, "LGBT score.js.txt")
         with open(path, "r", encoding="utf-8") as f:
             trans = json.loads(f.read().split(" = ")[-1].split(";")[0])
         for i in trans:
@@ -135,7 +130,7 @@ class Forest:
         return matrix
 
     def sex(self, matrix):
-        path = os.path.join(self.file, "Sex education.txt")
+        path = os.path.join(rheast.file, "Sex education.txt")
         with open(path, "r", encoding="utf-8") as f:
             data = f.read().split("\n\n")
             for i, e in enumerate(data):
@@ -146,7 +141,7 @@ class Forest:
         return matrix
 
     def urb(self, matrix):
-        path = os.path.join(self.file, "Urban population.xls")
+        path = os.path.join(rheast.file, "Urban population.xls")
         data = pd.read_excel(path, sheet_name=0, engine="xlrd")
         data = data[data.index > 2].iloc[:, [0, -1]]
         for _, (a, b) in data.iterrows():
@@ -157,7 +152,7 @@ class Forest:
         return matrix
 
     def fun(self, matrix):
-        path = os.path.join(self.file, "Funding.xlsx")
+        path = os.path.join(rheast.file, "Funding.xlsx")
         data = pd.read_excel(path, sheet_name=0)
         data = data[data.index > 2].iloc[:, [1, 3, 4, -2]]
         robot = {}
@@ -174,18 +169,15 @@ class Forest:
         return matrix
 
     def tar(self, matrix):
-        path = os.path.join(self.file, "HIV_estimates_from_1990-to-present.xlsx")
-        sheets = pd.read_excel(path, sheet_name=[1, 3])
-        data1 = sheets[3].iloc[6:, [2, 3, 10, 33, 39, 63, 69]]
-        data2 = sheets[1].iloc[6:, [2, 48]]
+        data = unaids.data[3].iloc[6:, [2, 3, 10, 33, 39, 63, 69]]
         robot, world, before = {}, [], ""
-        for _, arr in data1.iterrows():
+        for _, arr in data.iterrows():
             name, a0, a1, b0, b1, c0, c1 = arr
-            if name in self.world:
+            if name in unaids.world:
                 if name != before:
                     world, before = [], name
                 if isinstance(c0, (int, float)) and float(c0) > 0:
-                    world = self.tar_num(a0, b0, c0)
+                    world = self.num(a0, b0, c0)
                 continue
             if not name in robot:
                 robot[name] = world
@@ -194,12 +186,14 @@ class Forest:
                 if isinstance(a, (int, float)) and float(a) > 0:
                     if isinstance(c, (int, float)) and float(c) > 0:
                         a, b, c = [float(str(x).replace(">", "")) for x in e]
-                        robot[name] = self.tar_num(a, b, c)
+                        robot[name] = self.num(a, b, c)
+
+        data = unaids.data[1].iloc[6:, [2, 48]]
         country, after = [], ""
-        for _, arr in data2.iterrows():
+        for _, arr in data.iterrows():
             name, n0 = arr
-            n0 = self.num(n0)
-            if name in self.world:
+            n0 = unaids.num(n0)
+            if name in unaids.world:
                 if name != before:
                     world, before = [], name
                 world.append(n0)
@@ -210,6 +204,7 @@ class Forest:
                 if n0 is not False:
                     country.append(n0)
                 robot[after]["New infection"] = [world[-5:], country[-5:]]
+
         for name in robot:
             arr = robot[name]["New infection"]
             if type(arr) != type([]):
@@ -220,25 +215,17 @@ class Forest:
                 b = a
             b = (b[-1] / b[0]) ** (1 / (len(b) - 1)) - 1
             robot[name]["New infection"] = round(b, 5)
+
         for i in robot:
             if i in matrix:
                 matrix[i].update(robot[i])
         return matrix
 
-    def tar_num(self, *number):
+    def num(self, *number):
         sets, target = {}, ["First", "Second", "Third"]
         for i, e in enumerate(number):
             sets[f"{target[i]} 95 target"] = e
         return sets
-
-    def num(self, value):
-        if type(value) == type(""):
-            value = re.sub("[, <>]", "", value)
-        if value == "...":
-            return False
-        if isinstance(value, str) and "m" in value.lower():
-            return float(value.replace("m", "")) * 1e6
-        return float(value)
 
     def name(self, name):
         name = name.split(",")[0].split("(")[0].strip(" ").replace("'s ", " ")

@@ -13,21 +13,10 @@ from unaids import unaids
 
 class Predict:
     def __init__(self) -> None:
-        self.path = os.path.dirname(os.path.abspath(__file__))
-        self.file = os.path.join(self.path, "file")
-        self.image = os.path.join(self.path, "image")
-        os.makedirs(self.image, exist_ok=True)
-        self.data, self.time, self.border = {}, (2013, 2050), "#e7f1ff"
+        self.border = "#e7f1ff"
         self.color = [
             *["#f93a4a", "#1677ff", "#00bfd0", "#00b578", "#b136ff"],
             *["#ff36c4", "#ff8f1f", "#00d4a0", "#7c868d", "#996b59"],
-        ]
-        self.world = [
-            *["Global", "Asia and the Pacific"],
-            *["Caribbean", "Eastern and southern Africa"],
-            *["Eastern Europe and central Asia", "Latin America"],
-            *["Middle East and North Africa", "Western and central Africa"],
-            *["Western and central Europe and North America"],
         ]
         self.vlim = {"vmin": -10, "vmax": 10}
         self.cmap = ["#1677ff", "#5dfeb7", "#fff3d9", "#ff8f1f", "#f93a4a"]
@@ -51,7 +40,6 @@ class Predict:
         return self.run_area(index + 1)
 
     def run_world(self):
-        self.time = (2010, 2050)
         matrix = set(unaids.sheet(1, every=True)["Unnamed: 2"])
         matrix = [[i, 0, {}] for i in matrix]
         return matrix, {}
@@ -59,7 +47,7 @@ class Predict:
     def run_global(self):
         ctrl = {"path": "_global", "y0": (15e6, 50e6), "y3": (1e5, 5e5)}
         matrix = [0, 1, 3, 0, 2, 2, 3, 1, 2]
-        matrix = [[self.world[i], e] for i, e in enumerate(matrix)]
+        matrix = [[unaids.world[i], e] for i, e in enumerate(matrix)]
         matrix = [[*i, {"rule": "sum", "txt": "Global (Sum result)"}] for i in matrix]
         return matrix, ctrl
 
@@ -83,7 +71,7 @@ class Predict:
                 if len(set(value[-(i + 1) :])) > 2:
                     number = value[-(i + 1) :]
                     break
-            if len(number) < 1 or name in self.world:
+            if len(number) < 1 or name in unaids.world:
                 continue
             start, end, year = number[0], number[-1], len(number) - 1
             if start and end and year:
@@ -110,13 +98,13 @@ class Predict:
 
         sets = {"column": "value", "ax": ax, **self.vlim}
         sets = {**sets, "cmap": self.cmap, "missing_kwds": {"color": "#d1d5dd"}}
-        world = os.path.join(self.file, "ne_110m_admin_0_countries.zip")
+        world = os.path.join(rheast.file, "ne_110m_admin_0_countries.zip")
         world = gpd.read_file(world)
         world = world.merge(df, how="left", left_on="NAME", right_on="name")
         world.boundary.plot(ax=ax, linewidth=1, color="black")
         world.plot(**sets)
 
-        path = os.path.join(self.image, "fig__map.svg")
+        path = os.path.join(rheast.image, "fig__map.svg")
         fig.savefig(path, bbox_inches="tight", format="svg")
         return
 
@@ -138,10 +126,10 @@ class Predict:
         plt.tight_layout()
         plt.subplots_adjust()
 
-        path = os.path.join(self.image, "fig__bar.txt")
+        path = os.path.join(rheast.image, "fig__bar.txt")
         with open(path, "w", encoding="utf-8") as f:
             f.write(str(data))
-        path = os.path.join(self.image, "fig__bar.svg")
+        path = os.path.join(rheast.image, "fig__bar.svg")
         plt.savefig(path, bbox_inches="tight", format="svg")
         return
 
@@ -154,7 +142,7 @@ class Predict:
             axes.append(fig.add_subplot(i))
         self.line_draw(image, axes, ctrl)
         self.line_grid(axes, ctrl)
-        path = os.path.join(self.image, f"fig_{ctrl['path']}.svg")
+        path = os.path.join(rheast.image, f"fig_{ctrl['path']}.svg")
         fig.savefig(path, bbox_inches="tight", format="svg")
         return
 
@@ -190,7 +178,7 @@ class Predict:
     def line_grid(self, axes, ctrl):
         for i, ax in enumerate(axes):
             ax.grid(True, color=self.border, linestyle="--")
-            x, y = self.time, ctrl.get(f"y{i}", False)
+            x, y = unaids.time, ctrl.get(f"y{i}", False)
             for e in ["top", "right"]:
                 ax.spines[e].set_color(self.border)
             ax.set_xlim(*x), ax.set_yticks(ax.get_yticks())
@@ -231,7 +219,7 @@ class Predict:
         if rule == 95 and i == 0:
             sets["name"] = info["text"][0]
             line = {"color": self.border, "line": "-", "ax": 1}
-            image.append({**line, "data": [self.time, [0.95, 0.95]]})
+            image.append({**line, "data": [unaids.time, [0.95, 0.95]]})
         if rule == 95 and i > 0:
             image += unaids.sheet_img(data, [], sets)
             data = unaids.sheet_div(*unaids.sheet_com(data, matrix[i - 1]))

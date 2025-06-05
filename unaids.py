@@ -8,7 +8,21 @@ class UNAIDS:
         self.path = os.path.dirname(os.path.abspath(__file__))
         self.file = os.path.join(self.path, "file")
         self.xlsx = os.path.join(self.file, "HIV_estimates_from_1990-to-present.xlsx")
-        self.data, self.time = {}, (2013, 2050)
+        self.data = pd.read_excel(self.xlsx, sheet_name=[0, 1, 2, 3])
+        self.time = (2013, 2050)
+        self.world = [
+            *["Global", "Asia and the Pacific"],
+            *["Caribbean", "Eastern and southern Africa"],
+            *["Eastern Europe and central Asia", "Latin America"],
+            *["Middle East and North Africa", "Western and central Africa"],
+            *["Western and central Europe and North America"],
+        ]
+        self.info = [
+            *["Country", "Growth rate", "LGBT score"],
+            *["Sex education", "Urban population", "Funding"],
+            *["First 95 target", "Second 95 target", "Third 95 target"],
+            *["New infection"],
+        ]
         return
 
     def sheet_img(self, data, model, sets):
@@ -69,8 +83,6 @@ class UNAIDS:
         return self.sheet(**sets)
 
     def sheet(self, sheet, name="", index=0, title="", start=0, every=False):
-        if not sheet in self.data:
-            self.data[sheet] = pd.read_excel(self.xlsx, sheet_name=sheet)
         data = self.data[sheet].copy()
         data = data[data.index >= 7]
         if every:
@@ -81,7 +93,7 @@ class UNAIDS:
         a, b = data.columns
         data[a] = pd.to_numeric(data[a])
         data = data[data[a] >= start]
-        data = data[~data[b].isin(["...", "<500", "<200", "<100"])]
+        data = data[~data[b].isin(["..."])]
         data = self.num_all(data)
         data = [np.array(data[i]) for i in data.columns]
         return data
@@ -89,6 +101,8 @@ class UNAIDS:
     def num(self, value):
         if type(value) == type(""):
             value = re.sub("[, <>]", "", value)
+        if value == "...":
+            return False
         if isinstance(value, str) and "m" in value.lower():
             return float(value.replace("m", "")) * 1e6
         return float(value)
@@ -113,5 +127,6 @@ class UNAIDS:
 
     def num_5(self, num):
         return num + (5 - num % 5) if num % 5 != 0 else num
+
 
 unaids = UNAIDS()
