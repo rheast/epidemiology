@@ -34,38 +34,37 @@ class Forest:
         path = os.path.join(rheast.image, "output.txt")
         with open(path, "w", encoding="utf-8") as f:
             f.write(str(matrix))
-        for i in ["", "New infection"]:
-            if i in unaids.info:
-                unaids.info.remove(i)
-            self.forest(matrix)
+        fig, axs = plt.subplots(2, 2, figsize=(12.5, 8))
+        self.info = unaids.info[:9]
+        self.forest(matrix, axs[0, 0], axs[0, 1])
+        self.info = unaids.info[:2] + unaids.info[-4:]
+        self.forest(matrix, axs[1, 0], axs[1, 1])
+        fig.tight_layout()
+        path = os.path.join(rheast.image, f"output.svg")
+        fig.savefig(path, format="svg")
         return
 
-    def forest(self, matrix):
+    def forest(self, matrix, ax1, ax2):
         data, robot, color = [], [], self.color
-        info = {i: None for i in unaids.info}
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12.5, 4))
-        # print({i: sum(i in matrix[e] for e in matrix) for i in unaids.info})
+        info = {i: None for i in self.info}
 
         for i in matrix:
             arr = {**info, **matrix[i]}
             if len(str(arr).split("None")) == 1:
                 data.append(arr)
 
-        x = [[d[i] for i in unaids.info[2:]] for d in data]
+        x = [[d[i] for i in self.info[2:]] for d in data]
         y = [d["Growth rate"] for d in data]
-        z = [d["Country"] for d in data]
         model = {"n_estimators": 1000, "random_state": 0}
-        if "New infection" in unaids.info:
-            model["max_features"] = int(np.sqrt(len(unaids.info)))
         rf_model = RandomForestRegressor(**model)
         rf_model.fit(x, y)
 
-        for i, e in enumerate(unaids.info[2:]):
+        for i, e in enumerate(self.info[2:]):
             a = np.corrcoef([d[e] for d in data], y)[0, 1]
             robot.append("+" if a > 0 else "-")
 
         imp = [round(i * 100, 2) for i in rf_model.feature_importances_]
-        sets = {"Clue": unaids.info[2:], "Importance": imp, "Correlation": robot}
+        sets = {"Clue": self.info[2:], "Importance": imp, "Correlation": robot}
         sets = pd.DataFrame(sets)
         sets = sets.sort_values(by="Importance", ascending=False)
         path = os.path.join(rheast.image, "output.xlsx")
@@ -75,18 +74,19 @@ class Forest:
         mark = {**mark, "autopct": lambda i: f"{i:.2f}%" if i > 0 else ""}
         mark = {**mark, "textprops": {"color": "white"}, "labeldistance": 1.1}
         mark = {**mark, "wedgeprops": {"linewidth": 1, "edgecolor": "white"}}
-        mark = {**mark, "pctdistance": 0.8, "startangle": 0}
+        mark = {**mark, "pctdistance": 0.8, "startangle": 90}
         ax1.pie(sets["Importance"], **mark)
         for text in ax1.texts:
             if text.get_text() in sets["Clue"].values:
                 text.set_color("black")
         ax1.axis("equal")
 
+        width = (len(self.info) - 3) * 0.08
         colors = [color[4] if i == "+" else color[0] for i in sets["Correlation"]]
-        ax2.bar(sets["Clue"], sets["Importance"], color=colors, width=0.5, zorder=5)
+        ax2.bar(sets["Clue"], sets["Importance"], color=colors, width=width, zorder=5)
         ax2.set_ylabel("Importance"), ax2.set_yticks(ax2.get_yticks())
         ax2.set_yticklabels([f"{i:.0f}%" for i in ax2.get_yticks()])
-        ax2.tick_params(axis="x", rotation=0)
+        ax2.tick_params(axis="x", rotation=20)
         ax2.grid(True, color=self.border, linestyle="--")
         for e in ["top", "right"]:
             ax2.spines[e].set_color(self.border)
@@ -97,11 +97,6 @@ class Forest:
         mark = [{"marker": "o", "color": "w", "markersize": 7.5, **i} for i in mark]
         mark = [mlines.Line2D([], [], **i) for i in mark]
         ax2.legend(handles=mark, loc="upper right")
-        plt.xticks(rotation=20, ha="right")
-
-        fig.tight_layout()
-        path = os.path.join(rheast.image, f"output.{len(unaids.info)}.svg")
-        fig.savefig(path, bbox_inches="tight", format="svg")
         return
 
     def val(self, matrix):
@@ -189,7 +184,7 @@ class Forest:
                         robot[name] = self.num(a, b, c)
 
         data = unaids.data[1].iloc[6:, [2, 48]]
-        country, after = [], ""
+        country, after, hunt = [], "", {}
         for _, arr in data.iterrows():
             name, n0 = arr
             n0 = unaids.num(n0)
@@ -200,25 +195,19 @@ class Forest:
                 continue
             else:
                 if name != after:
-                    country, after = [False] * 5, name
-                if n0 is not False:
+                    country, after = [], name
+                if n0:
                     country.append(n0)
-                robot[after]["New infection"] = [world[-5:], country[-5:]]
+                hunt[name] = [world, country]
 
-        for name in robot:
-            arr = robot[name]["New infection"]
-            if type(arr) != type([]):
-                continue
-            a, b = arr
-            b = [x for x in b if x is not False]
-            if len(b) < 2:
-                b = a
-            b = (b[-1] / b[0]) ** (1 / (len(b) - 1)) - 1
-            robot[name]["New infection"] = round(b, 5)
-
-        for i in robot:
-            if i in matrix:
+        for i in matrix:
+            if i in robot:
                 matrix[i].update(robot[i])
+            if i in hunt:
+                a, b = hunt[i]
+                value = b[-3:] if len(b) > 1 else a[-3:]
+                value = (value[-1] / value[0]) ** (1 / (len(value) - 1)) - 1
+                matrix[i]["New infection"] = round(value, 5)
         return matrix
 
     def num(self, *number):
