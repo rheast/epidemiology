@@ -67,8 +67,6 @@ class Forest:
         sets = {"Clue": self.info[2:], "Importance": imp, "Correlation": robot}
         sets = pd.DataFrame(sets)
         sets = sets.sort_values(by="Importance", ascending=False)
-        path = os.path.join(rheast.image, "output.xlsx")
-        sets.to_excel(path, index=False)
 
         mark = {"labels": sets["Clue"], "colors": color[: len(sets)]}
         mark = {**mark, "autopct": lambda i: f"{i:.2f}%" if i > 0 else ""}
